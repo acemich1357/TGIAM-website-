@@ -30,6 +30,7 @@ const navLinks = [
   { href: "/founders", label: "Founders" },
   { href: "/partners", label: "Partners" },
   { href: "/resources", label: "Resources" },
+  { href: "/admin", label: "Admin" },
 ];
 
 export default function RootLayout({
@@ -89,8 +90,17 @@ export default function RootLayout({
                 <ul className="space-y-2 text-sm text-gray-400">
                   <li><a href="https://www.linkedin.com/in/ace-michel-ngidari-36896013a" target="_blank" rel="noopener noreferrer" className="hover:text-white">LinkedIn</a></li>
                   <li><Link href="/resources" className="hover:text-white">Resources</Link></li>
-                  <li><Link href="/contact" className="hover:text-white">Contact</Link></li>
+                  <li><Link href="/admin" className="hover:text-white">Admin Login</Link></li>
                 </ul>
+              </div>
+            </div>
+            <div className="mt-8 pt-8 border-t border-white/10">
+              <div className="flex flex-col md:flex-row justify-center items-center gap-6 text-sm text-gray-400">
+                <a href="mailto:amorantgiam@gmail.com" className="hover:text-white">✉ amorantgiam@gmail.com</a>
+                <span className="hidden md:inline">|</span>
+                <a href="tel:+254700757159" className="hover:text-white">📞 +254700757159</a>
+                <span className="hidden md:inline">|</span>
+                <a href="https://www.tgiam.org" target="_blank" rel="noopener noreferrer" className="hover:text-white">🌐 www.tgiam.org</a>
               </div>
             </div>
             <div className="mt-8 pt-8 border-t border-white/10 text-center text-sm text-gray-500">

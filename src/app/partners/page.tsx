@@ -2,6 +2,20 @@
 
 import { useState } from "react";
 
+function getInitialPitchDeckState() {
+  if (typeof window === "undefined") {
+    return { available: false, name: "" };
+  }
+  const deck = localStorage.getItem("tgiam_pitch_deck");
+  const name = localStorage.getItem("tgiam_pitch_deck_name");
+  return {
+    available: !!deck,
+    name: name || "Pitch Deck",
+  };
+}
+
+const initialPitchDeck = getInitialPitchDeckState();
+
 export default function PartnersPage() {
   const [formData, setFormData] = useState({
     name: "",
@@ -10,6 +24,8 @@ export default function PartnersPage() {
     interest: "",
     message: "",
   });
+  const [pitchDeckAvailable] = useState(initialPitchDeck.available);
+  const [pitchDeckName] = useState(initialPitchDeck.name);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,9 +155,17 @@ export default function PartnersPage() {
                 <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
                   <h3 className="text-lg font-bold text-white mb-2">Pitch Deck</h3>
                   <p className="text-gray-400 text-sm mb-4">Comprehensive overview of TGIAM vision, ecosystem, and opportunities.</p>
-                  <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                    Download PDF
-                  </button>
+                  {pitchDeckAvailable ? (
+                    <a
+                      href={typeof window !== "undefined" ? localStorage.getItem("tgiam_pitch_deck") || "" : ""}
+                      download={pitchDeckName}
+                      className="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      Download PDF
+                    </a>
+                  ) : (
+                    <span className="text-gray-500 text-sm">Coming Soon</span>
+                  )}
                 </div>
                 <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
                   <h3 className="text-lg font-bold text-white mb-2">Whitepaper</h3>
