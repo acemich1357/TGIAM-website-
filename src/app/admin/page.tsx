@@ -101,12 +101,16 @@ export default function AdminPage() {
   const router = useRouter();
 
   useEffect(() => {
-    getPitchDeck().then((deck) => {
-      if (deck) {
-        setCurrentPitchDeck(deck);
-      }
-      setLoading(false);
-    });
+    getPitchDeck()
+      .then((deck) => {
+        if (deck) {
+          setCurrentPitchDeck(deck);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   const handleLogin = (e: React.FormEvent) => {
