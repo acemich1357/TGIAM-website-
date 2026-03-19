@@ -1,20 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-function getInitialPitchDeckState() {
-  if (typeof window === "undefined") {
-    return { available: false, name: "" };
-  }
-  const deck = localStorage.getItem("tgiam_pitch_deck");
-  const name = localStorage.getItem("tgiam_pitch_deck_name");
-  return {
-    available: !!deck,
-    name: name || "Pitch Deck",
-  };
+const DB_NAME = "TGIAM_DB";
+const STORE_NAME = "pitchdecks";
+
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+    };
+  });
 }
 
-const initialPitchDeck = getInitialPitchDeckState();
+async function getPitchDeck(): Promise<{ name: string; data: string; size: number } | null> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], "readonly");
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.get("pitchdeck");
+    request.onsuccess = () => {
+      if (request.result) {
+        resolve({
+          name: request.result.name,
+          data: request.result.data,
+          size: request.result.size,
+        });
+      } else {
+        resolve(null);
+      }
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
 
 export default function PartnersPage() {
   const [formData, setFormData] = useState({
@@ -24,8 +48,19 @@ export default function PartnersPage() {
     interest: "",
     message: "",
   });
-  const [pitchDeckAvailable] = useState(initialPitchDeck.available);
-  const [pitchDeckName] = useState(initialPitchDeck.name);
+  const [pitchDeckAvailable, setPitchDeckAvailable] = useState(false);
+  const [pitchDeckData, setPitchDeckData] = useState<string | null>(null);
+  const [pitchDeckName, setPitchDeckName] = useState("Pitch Deck");
+
+  useEffect(() => {
+    getPitchDeck().then((deck) => {
+      if (deck) {
+        setPitchDeckAvailable(true);
+        setPitchDeckData(deck.data);
+        setPitchDeckName(deck.name);
+      }
+    });
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,9 +190,9 @@ export default function PartnersPage() {
                 <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
                   <h3 className="text-lg font-bold text-white mb-2">Pitch Deck</h3>
                   <p className="text-gray-400 text-sm mb-4">Comprehensive overview of TGIAM vision, ecosystem, and opportunities.</p>
-                  {pitchDeckAvailable ? (
+                  {pitchDeckAvailable && pitchDeckData ? (
                     <a
-                      href={typeof window !== "undefined" ? localStorage.getItem("tgiam_pitch_deck") || "" : ""}
+                      href={pitchDeckData}
                       download={pitchDeckName}
                       className="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                     >

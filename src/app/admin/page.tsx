@@ -1,19 +1,89 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 const ADMIN_EMAIL = "acemichel0@gmail.com";
 const ADMIN_PASSWORD = "@3842YasLove1357";
 
+const DB_NAME = "TGIAM_DB";
+const STORE_NAME = "pitchdecks";
+
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+    };
+  });
+}
+
+async function savePitchDeck(file: File): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], "readwrite");
+    const store = transaction.objectStore(STORE_NAME);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const request = store.put({
+        id: "pitchdeck",
+        name: file.name,
+        data: reader.result as string,
+        size: file.size,
+        type: file.type,
+        updatedAt: new Date().toISOString(),
+      });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function getPitchDeck(): Promise<{ name: string; data: string; size: number } | null> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], "readonly");
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.get("pitchdeck");
+    request.onsuccess = () => {
+      if (request.result) {
+        resolve({
+          name: request.result.name,
+          data: request.result.data,
+          size: request.result.size,
+        });
+      } else {
+        resolve(null);
+      }
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function deletePitchDeck(): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], "readwrite");
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.delete("pitchdeck");
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
 function getInitialState() {
   if (typeof window === "undefined") {
-    return { loggedIn: false, deck: null };
+    return { loggedIn: false };
   }
   return {
     loggedIn: localStorage.getItem("tgiam_admin_logged_in") === "true",
-    deck: localStorage.getItem("tgiam_pitch_deck"),
   };
 }
 
@@ -26,8 +96,18 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [pitchDeck, setPitchDeck] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string>("");
-  const [currentPitchDeck, setCurrentPitchDeck] = useState<string | null>(initialState.deck);
+  const [currentPitchDeck, setCurrentPitchDeck] = useState<{ name: string; data: string; size: number } | null>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    getPitchDeck().then((deck) => {
+      if (deck) {
+        setCurrentPitchDeck(deck);
+      }
+      setLoading(false);
+    });
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,37 +129,49 @@ export default function AdminPage() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setUploadStatus("File too large. Maximum size is 5MB due to browser storage limits.");
-        setPitchDeck(null);
-        return;
-      }
       setPitchDeck(file);
       setUploadStatus("");
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (pitchDeck) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        localStorage.setItem("tgiam_pitch_deck", result);
-        localStorage.setItem("tgiam_pitch_deck_name", pitchDeck.name);
-        setCurrentPitchDeck(result);
+      setUploadStatus("Uploading...");
+      try {
+        await savePitchDeck(pitchDeck);
+        const deck = await getPitchDeck();
+        setCurrentPitchDeck(deck);
         setUploadStatus("Pitch deck uploaded successfully!");
         setPitchDeck(null);
-      };
-      reader.readAsDataURL(pitchDeck);
+      } catch (err) {
+        setUploadStatus("Upload failed. Please try again.");
+        console.error(err);
+      }
     }
   };
 
-  const handleDeletePitchDeck = () => {
-    localStorage.removeItem("tgiam_pitch_deck");
-    localStorage.removeItem("tgiam_pitch_deck_name");
-    setCurrentPitchDeck(null);
-    setUploadStatus("Pitch deck removed.");
+  const handleDeletePitchDeck = async () => {
+    try {
+      await deletePitchDeck();
+      setCurrentPitchDeck(null);
+      setUploadStatus("Pitch deck removed.");
+    } catch (err) {
+      setUploadStatus("Failed to remove. Please try again.");
+    }
   };
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </main>
+    );
+  }
 
   if (!isLoggedIn) {
     return (
@@ -157,11 +249,12 @@ export default function AdminPage() {
               <div className="flex justify-between items-center">
                 <div>
                   <p className="text-green-400 font-semibold">Current Pitch Deck Uploaded</p>
-                  <p className="text-gray-400 text-sm">{localStorage.getItem("tgiam_pitch_deck_name")}</p>
+                  <p className="text-white">{currentPitchDeck.name}</p>
+                  <p className="text-gray-400 text-sm">Size: {formatSize(currentPitchDeck.size)}</p>
                 </div>
                 <a
-                  href={currentPitchDeck}
-                  download="TGIAM-Pitch-Deck.pdf"
+                  href={currentPitchDeck.data}
+                  download={currentPitchDeck.name}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
                   Download
@@ -171,7 +264,7 @@ export default function AdminPage() {
           )}
 
           <div className="mb-4">
-            <label className="block text-gray-400 text-sm mb-2">Upload New Pitch Deck (PDF/PPT/PPTX, max 5MB)</label>
+            <label className="block text-gray-400 text-sm mb-2">Upload New Pitch Deck (PDF/PPT/PPTX, max 100MB)</label>
             <input
               type="file"
               accept=".pdf,.ppt,.pptx"
@@ -184,7 +277,7 @@ export default function AdminPage() {
             <div className="mb-4 p-4 bg-blue-600/20 border border-blue-500/50 rounded-lg">
               <p className="text-blue-400 font-semibold">Selected file:</p>
               <p className="text-white">{pitchDeck.name}</p>
-              <p className="text-gray-400 text-sm">Size: {(pitchDeck.size / 1024 / 1024).toFixed(2)} MB</p>
+              <p className="text-gray-400 text-sm">Size: {formatSize(pitchDeck.size)}</p>
             </div>
           )}
 
