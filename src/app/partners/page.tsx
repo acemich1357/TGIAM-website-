@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 
 const DB_NAME = "TGIAM_DB";
 const STORE_NAME = "pitchdecks";
+const DB_VERSION = 2;
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
     request.onupgradeneeded = (event) => {
@@ -20,6 +21,9 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 async function getPitchDeck(): Promise<{ name: string; data: string; size: number } | null> {
+  if (typeof window === "undefined") {
+    return null;
+  }
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([STORE_NAME], "readonly");

@@ -40,11 +40,18 @@ async function openDB(): Promise<IDBDatabase> {
 
 async function savePitchDeck(file: File): Promise<void> {
   return new Promise((resolve, reject) => {
-    try {
+    if (typeof window === "undefined") {
+      reject(new Error("Not in browser"));
+      return;
+    }
+    
+    const reader = new window.FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
       const data = {
         id: "pitchdeck",
         name: file.name,
-        data: URL.createObjectURL(file),
+        data: result,
         size: file.size,
         type: file.type,
         updatedAt: new Date().toISOString(),
@@ -56,23 +63,27 @@ async function savePitchDeck(file: File): Promise<void> {
         const request = store.put(data);
         
         request.onsuccess = () => {
-          console.log("Pitch deck saved successfully");
           resolve();
         };
         
         request.onerror = () => {
-          console.error("Save error:", request.error);
           reject(request.error);
         };
       }).catch(reject);
-    } catch (err) {
-      console.error("Save error:", err);
-      reject(err);
-    }
+    };
+    
+    reader.onerror = () => {
+      reject(reader.error || new Error("Failed to read file"));
+    };
+    
+    reader.readAsDataURL(file);
   });
 }
 
 async function getPitchDeck(): Promise<{ name: string; data: string; size: number } | null> {
+  if (typeof window === "undefined") {
+    return null;
+  }
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([STORE_NAME], "readonly");
@@ -92,13 +103,15 @@ async function getPitchDeck(): Promise<{ name: string; data: string; size: numbe
     };
     
     request.onerror = () => {
-      console.error("Get error:", request.error);
       reject(request.error);
     };
   });
 }
 
 async function deletePitchDeck(): Promise<void> {
+  if (typeof window === "undefined") {
+    return;
+  }
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([STORE_NAME], "readwrite");
