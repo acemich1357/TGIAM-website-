@@ -49,11 +49,13 @@ export default function AdminPage() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        setUploadStatus("File too large. Maximum size is 50MB.");
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadStatus("File too large. Maximum size is 5MB due to browser storage limits.");
+        setPitchDeck(null);
         return;
       }
       setPitchDeck(file);
+      setUploadStatus("");
     }
   };
 
@@ -169,7 +171,7 @@ export default function AdminPage() {
           )}
 
           <div className="mb-4">
-            <label className="block text-gray-400 text-sm mb-2">Upload New Pitch Deck (PDF, max 50MB)</label>
+            <label className="block text-gray-400 text-sm mb-2">Upload New Pitch Deck (PDF/PPT/PPTX, max 5MB)</label>
             <input
               type="file"
               accept=".pdf,.ppt,.pptx"
@@ -179,12 +181,20 @@ export default function AdminPage() {
           </div>
 
           {pitchDeck && (
+            <div className="mb-4 p-4 bg-blue-600/20 border border-blue-500/50 rounded-lg">
+              <p className="text-blue-400 font-semibold">Selected file:</p>
+              <p className="text-white">{pitchDeck.name}</p>
+              <p className="text-gray-400 text-sm">Size: {(pitchDeck.size / 1024 / 1024).toFixed(2)} MB</p>
+            </div>
+          )}
+
+          {pitchDeck && (
             <div className="flex gap-4">
               <button
                 onClick={handleUpload}
                 className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:opacity-90 transition-opacity"
               >
-                Upload
+                Upload & Save
               </button>
               <button
                 onClick={() => setPitchDeck(null)}
@@ -193,6 +203,10 @@ export default function AdminPage() {
                 Cancel
               </button>
             </div>
+          )}
+
+          {!pitchDeck && !currentPitchDeck && (
+            <p className="text-gray-500 text-sm">No pitch deck uploaded yet. Select a file above and click Upload.</p>
           )}
 
           {uploadStatus && (
