@@ -9,12 +9,26 @@ const ADMIN_PASSWORD = "@3842YasLove1357";
 
 const DB_NAME = "TGIAM_DB";
 const STORE_NAME = "pitchdecks";
+const DB_VERSION = 2;
 
-function openDB(): Promise<IDBDatabase> {
+let dbInstance: IDBDatabase | null = null;
+
+async function openDB(): Promise<IDBDatabase> {
+  if (dbInstance) return dbInstance;
+  
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    
+    request.onerror = () => {
+      console.error("DB open error:", request.error);
+      reject(request.error);
+    };
+    
+    request.onsuccess = () => {
+      dbInstance = request.result;
+      resolve(request.result);
+    };
+    
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
@@ -25,23 +39,45 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 async function savePitchDeck(file: File): Promise<void> {
-  const db = await openDB();
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], "readwrite");
-    const store = transaction.objectStore(STORE_NAME);
     const reader = new FileReader();
-    reader.onloadend = () => {
-      const request = store.put({
-        id: "pitchdeck",
-        name: file.name,
-        data: reader.result as string,
-        size: file.size,
-        type: file.type,
-        updatedAt: new Date().toISOString(),
-      });
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+    reader.onload = async () => {
+      try {
+        const db = await openDB();
+        const transaction = db.transaction([STORE_NAME], "readwrite");
+        const store = transaction.objectStore(STORE_NAME);
+        
+        const data = {
+          id: "pitchdeck",
+          name: file.name,
+          data: reader.result as string,
+          size: file.size,
+          type: file.type,
+          updatedAt: new Date().toISOString(),
+        };
+        
+        const request = store.put(data);
+        
+        request.onsuccess = () => {
+          console.log("Pitch deck saved successfully");
+          resolve();
+        };
+        
+        request.onerror = () => {
+          console.error("Save error:", request.error);
+          reject(request.error);
+        };
+      } catch (err) {
+        console.error("Save catch error:", err);
+        reject(err);
+      }
     };
+    
+    reader.onerror = () => {
+      console.error("FileReader error:", reader.error);
+      reject(reader.error);
+    };
+    
     reader.readAsDataURL(file);
   });
 }
@@ -52,6 +88,7 @@ async function getPitchDeck(): Promise<{ name: string; data: string; size: numbe
     const transaction = db.transaction([STORE_NAME], "readonly");
     const store = transaction.objectStore(STORE_NAME);
     const request = store.get("pitchdeck");
+    
     request.onsuccess = () => {
       if (request.result) {
         resolve({
@@ -63,7 +100,11 @@ async function getPitchDeck(): Promise<{ name: string; data: string; size: numbe
         resolve(null);
       }
     };
-    request.onerror = () => reject(request.error);
+    
+    request.onerror = () => {
+      console.error("Get error:", request.error);
+      reject(request.error);
+    };
   });
 }
 
@@ -73,6 +114,7 @@ async function deletePitchDeck(): Promise<void> {
     const transaction = db.transaction([STORE_NAME], "readwrite");
     const store = transaction.objectStore(STORE_NAME);
     const request = store.delete("pitchdeck");
+    
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
   });
@@ -139,18 +181,24 @@ export default function AdminPage() {
   };
 
   const handleUpload = async () => {
-    if (pitchDeck) {
-      setUploadStatus("Uploading...");
-      try {
-        await savePitchDeck(pitchDeck);
-        const deck = await getPitchDeck();
-        setCurrentPitchDeck(deck);
-        setUploadStatus("Pitch deck uploaded successfully!");
-        setPitchDeck(null);
-      } catch (err) {
-        setUploadStatus("Upload failed. Please try again.");
-        console.error(err);
-      }
+    if (!pitchDeck) {
+      setUploadStatus("No file selected.");
+      return;
+    }
+    
+    setUploadStatus("Uploading...");
+    try {
+      console.log("Starting upload for:", pitchDeck.name, pitchDeck.size);
+      await savePitchDeck(pitchDeck);
+      console.log("Save complete, fetching...");
+      const deck = await getPitchDeck();
+      console.log("Fetched deck:", deck ? deck.name : null);
+      setCurrentPitchDeck(deck);
+      setUploadStatus("Pitch deck uploaded successfully!");
+      setPitchDeck(null);
+    } catch (err) {
+      console.error("Upload error:", err);
+      setUploadStatus("Upload failed: " + (err instanceof Error ? err.message : "Unknown error"));
     }
   };
 
