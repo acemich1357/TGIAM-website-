@@ -40,22 +40,19 @@ async function openDB(): Promise<IDBDatabase> {
 
 async function savePitchDeck(file: File): Promise<void> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const db = await openDB();
+    try {
+      const data = {
+        id: "pitchdeck",
+        name: file.name,
+        data: URL.createObjectURL(file),
+        size: file.size,
+        type: file.type,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      openDB().then((db) => {
         const transaction = db.transaction([STORE_NAME], "readwrite");
         const store = transaction.objectStore(STORE_NAME);
-        
-        const data = {
-          id: "pitchdeck",
-          name: file.name,
-          data: reader.result as string,
-          size: file.size,
-          type: file.type,
-          updatedAt: new Date().toISOString(),
-        };
-        
         const request = store.put(data);
         
         request.onsuccess = () => {
@@ -67,18 +64,11 @@ async function savePitchDeck(file: File): Promise<void> {
           console.error("Save error:", request.error);
           reject(request.error);
         };
-      } catch (err) {
-        console.error("Save catch error:", err);
-        reject(err);
-      }
-    };
-    
-    reader.onerror = () => {
-      console.error("FileReader error:", reader.error);
-      reject(reader.error);
-    };
-    
-    reader.readAsDataURL(file);
+      }).catch(reject);
+    } catch (err) {
+      console.error("Save error:", err);
+      reject(err);
+    }
   });
 }
 
