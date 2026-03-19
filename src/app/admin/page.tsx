@@ -123,6 +123,30 @@ async function deletePitchDeck(): Promise<void> {
   });
 }
 
+interface PlatformLink {
+  id: string;
+  name: string;
+  url: string;
+  description: string;
+}
+
+async function getPlatforms(): Promise<PlatformLink[]> {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  return new Promise((resolve) => {
+    const data = localStorage.getItem("tgiam_platforms");
+    resolve(data ? JSON.parse(data) : []);
+  });
+}
+
+async function savePlatforms(platforms: PlatformLink[]): Promise<void> {
+  if (typeof window === "undefined") {
+    return;
+  }
+  localStorage.setItem("tgiam_platforms", JSON.stringify(platforms));
+}
+
 function getInitialState() {
   if (typeof window === "undefined") {
     return { loggedIn: false };
@@ -143,6 +167,9 @@ export default function AdminPage() {
   const [uploadStatus, setUploadStatus] = useState<string>("");
   const [currentPitchDeck, setCurrentPitchDeck] = useState<{ name: string; data: string; size: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [platforms, setPlatforms] = useState<PlatformLink[]>([]);
+  const [newPlatform, setNewPlatform] = useState({ name: "", url: "", description: "" });
+  const [editingPlatform, setEditingPlatform] = useState<PlatformLink | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -156,6 +183,8 @@ export default function AdminPage() {
       .finally(() => {
         setLoading(false);
       });
+    
+    getPlatforms().then(setPlatforms);
   }, []);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -218,6 +247,34 @@ export default function AdminPage() {
   const formatSize = (bytes: number) => {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleAddPlatform = async () => {
+    if (!newPlatform.name || !newPlatform.url) return;
+    const platform: PlatformLink = {
+      id: Date.now().toString(),
+      name: newPlatform.name,
+      url: newPlatform.url,
+      description: newPlatform.description,
+    };
+    const updated = [...platforms, platform];
+    setPlatforms(updated);
+    await savePlatforms(updated);
+    setNewPlatform({ name: "", url: "", description: "" });
+  };
+
+  const handleUpdatePlatform = async () => {
+    if (!editingPlatform) return;
+    const updated = platforms.map(p => p.id === editingPlatform.id ? editingPlatform : p);
+    setPlatforms(updated);
+    await savePlatforms(updated);
+    setEditingPlatform(null);
+  };
+
+  const handleDeletePlatform = async (id: string) => {
+    const updated = platforms.filter(p => p.id !== id);
+    setPlatforms(updated);
+    await savePlatforms(updated);
   };
 
   if (loading) {
@@ -372,6 +429,121 @@ export default function AdminPage() {
                 Remove Pitch Deck
               </button>
             </div>
+          )}
+        </div>
+
+        {/* Platforms Section */}
+        <div className="mt-8 p-8 bg-white/5 rounded-2xl border border-white/10">
+          <h2 className="text-2xl font-bold text-white mb-6">Platforms & Apps</h2>
+          
+          {/* Add New Platform */}
+          <div className="mb-6 p-4 bg-black/30 rounded-xl border border-white/5">
+            <h3 className="text-white font-semibold mb-4">Add New Platform/App</h3>
+            <div className="grid gap-4">
+              <input
+                type="text"
+                placeholder="Platform Name (e.g., UNBNKD)"
+                value={newPlatform.name}
+                onChange={(e) => setNewPlatform({ ...newPlatform, name: e.target.value })}
+                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+              />
+              <input
+                type="url"
+                placeholder="Platform URL (e.g., https://unbnkd.com)"
+                value={newPlatform.url}
+                onChange={(e) => setNewPlatform({ ...newPlatform, url: e.target.value })}
+                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+              />
+              <input
+                type="text"
+                placeholder="Short Description"
+                value={newPlatform.description}
+                onChange={(e) => setNewPlatform({ ...newPlatform, description: e.target.value })}
+                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+              />
+              <button
+                onClick={handleAddPlatform}
+                disabled={!newPlatform.name || !newPlatform.url}
+                className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add Platform
+              </button>
+            </div>
+          </div>
+
+          {/* Existing Platforms */}
+          {platforms.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-white font-semibold">Your Platforms</h3>
+              {platforms.map((platform) => (
+                <div key={platform.id} className="p-4 bg-black/30 rounded-xl border border-white/5">
+                  {editingPlatform?.id === platform.id ? (
+                    <div className="grid gap-3">
+                      <input
+                        type="text"
+                        value={editingPlatform.name}
+                        onChange={(e) => setEditingPlatform({ ...editingPlatform, name: e.target.value })}
+                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-purple-500 focus:outline-none"
+                      />
+                      <input
+                        type="url"
+                        value={editingPlatform.url}
+                        onChange={(e) => setEditingPlatform({ ...editingPlatform, url: e.target.value })}
+                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-purple-500 focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={editingPlatform.description}
+                        onChange={(e) => setEditingPlatform({ ...editingPlatform, description: e.target.value })}
+                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-purple-500 focus:outline-none"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleUpdatePlatform}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingPlatform(null)}
+                          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="text-white font-semibold">{platform.name}</h4>
+                        <p className="text-gray-400 text-sm">{platform.description}</p>
+                        <a href={platform.url} target="_blank" rel="noopener noreferrer" className="text-purple-400 text-sm hover:underline">
+                          {platform.url}
+                        </a>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setEditingPlatform(platform)}
+                          className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeletePlatform(platform.id)}
+                          className="px-3 py-1 bg-red-600/20 text-red-400 border border-red-500/50 text-sm rounded-lg hover:bg-red-600/30"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {platforms.length === 0 && (
+            <p className="text-gray-500 text-sm">No platforms added yet. Add your first platform above.</p>
           )}
         </div>
 

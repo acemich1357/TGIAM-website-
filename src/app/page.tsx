@@ -1,6 +1,25 @@
 import Link from "next/link";
+import { useState } from "react";
+
+interface PlatformLink {
+  id: string;
+  name: string;
+  url: string;
+  description: string;
+}
+
+function getInitialPlatforms(): PlatformLink[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  const data = localStorage.getItem("tgiam_platforms");
+  return data ? JSON.parse(data) : [];
+}
+
+const initialPlatforms = getInitialPlatforms();
 
 export default function Home() {
+  const [platforms] = useState<PlatformLink[]>(initialPlatforms);
   return (
     <main className="min-h-screen bg-black">
       {/* HERO SECTION */}
@@ -94,6 +113,30 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* PLATFORMS SECTION */}
+      {platforms.length > 0 && (
+        <section className="py-24 px-4 bg-neutral-900">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-4xl font-bold text-white text-center mb-16">Our Platforms</h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {platforms.map((platform) => (
+                <a
+                  key={platform.id}
+                  href={platform.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group p-6 bg-black rounded-2xl border border-white/10 hover:border-purple-500/50 transition-all hover:transform hover:-translate-y-1"
+                >
+                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">{platform.name}</h3>
+                  <p className="text-gray-400 text-sm">{platform.description}</p>
+                  <span className="inline-block mt-4 text-purple-400 text-sm">Visit Platform →</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* QUICK LINKS SECTION */}
       <section className="py-24 px-4 bg-neutral-900">
