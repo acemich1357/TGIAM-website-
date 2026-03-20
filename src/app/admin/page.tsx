@@ -40,6 +40,10 @@ async function openDB(): Promise<IDBDatabase> {
 
 async function savePitchDeck(file: File): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (typeof FileReader === "undefined") {
+      reject(new Error("FileReader not available"));
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
