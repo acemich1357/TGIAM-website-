@@ -40,12 +40,7 @@ async function openDB(): Promise<IDBDatabase> {
 
 async function savePitchDeck(file: File): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (typeof window === "undefined") {
-      reject(new Error("Not in browser"));
-      return;
-    }
-    
-    const reader = new window.FileReader();
+    const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
       const data = {
