@@ -12,43 +12,47 @@ export default function MVPShowcasePage() {
         "Digital identity system",
         "Payment infrastructure",
       ],
-      cta: "Request Access",
+      cta: "Visit Platform",
+      url: "https://unbnkd-demo.vercel.app/",
     },
     {
       name: "Chunbiyo MVP",
-      status: "In Progress",
-      statusColor: "bg-yellow-500",
+      status: "Live",
+      statusColor: "bg-green-500",
       description: "Accelerator framework with startup onboarding system and innovation ecosystem.",
       features: [
         "Accelerator framework",
         "Startup onboarding system",
         "Innovation ecosystem",
       ],
-      cta: "Join Waitlist",
+      cta: "Visit Platform",
+      url: "https://chunbiyo-ventures-ai.vercel.app/",
     },
     {
-      name: "NFT Rental & Property Marketplace",
-      status: "In Progress",
-      statusColor: "bg-yellow-500",
+      name: "SolRent",
+      status: "Live",
+      statusColor: "bg-green-500",
       description: "Smart contract rental agreements with blockchain property listings and transparent leasing systems.",
       features: [
         "Smart contract rental agreements",
         "Blockchain property listings",
         "Transparent leasing systems",
       ],
-      cta: "Request Access",
+      cta: "Visit Platform",
+      url: "https://vercel.com/ace-michel-s-projects/sol-rent-beta/DRADg5AZybAfXGhckP7cCT4CM1Qb",
     },
     {
       name: "Pastures Platform",
-      status: "In Progress",
-      statusColor: "bg-yellow-500",
+      status: "Live",
+      statusColor: "bg-green-500",
       description: "Community and property ecosystem connecting landowners, investors, and agricultural ventures.",
       features: [
         "Community ecosystem",
         "Property management",
         "Agricultural investments",
       ],
-      cta: "Learn More",
+      cta: "Visit Platform",
+      url: "https://pastures.vercel.app/",
     },
   ];
 
@@ -82,9 +86,14 @@ export default function MVPShowcasePage() {
                     </li>
                   ))}
                 </ul>
-                <button className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:opacity-90 transition-opacity">
+                <a
+                  href={project.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:opacity-90 transition-opacity text-center"
+                >
                   {project.cta}
-                </button>
+                </a>
               </div>
             ))}
           </div>
